@@ -1,0 +1,36 @@
+define CENTRIFUGE 690945935
+
+define MAXREAGENT 399.0
+define MINREAGENT 3.0
+alias CodeError r1
+alias NbReagents r2
+alias IsFull r3
+alias IsEmpty r4
+
+start:
+
+lb CodeError CENTRIFUGE Error 3
+sgt CodeError CodeError 0
+lb NbReagents CENTRIFUGE Reagents 3
+
+sgt IsFull NbReagents MAXREAGENT
+slt IsEmpty NbReagents MINREAGENT
+
+and IsEmpty IsEmpty CodeError
+select CodeError IsEmpty 0 CodeError
+or IsFull IsFull CodeError
+
+beq IsFull 1 open
+beq IsEmpty 1 close
+end:
+
+yield
+j start
+
+open:
+sb CENTRIFUGE Open 1
+j end
+
+close:
+sb CENTRIFUGE Open 0
+j end
