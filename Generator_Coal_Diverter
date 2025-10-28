@@ -1,0 +1,44 @@
+define Coal -891321790 # Coal
+
+alias FlipFlop d0
+alias Stacker d1
+alias OreRequestChip d2
+
+s Stacker Mode 0
+s Stacker Setting 50
+s FlipFlop Setting 0
+jal FlipFlopReg
+
+Loop:
+yield
+move r1 0 # Reset
+bdns OreRequestChip 2 # Optional
+l r1 OreRequestChip Setting
+bnez r1 Passthru
+
+l r1 Stacker Activate
+beqz r1 Loop
+
+s db Setting Coal
+WaitForOutput:
+yield
+l r1 db Setting
+beq r1 Coal WaitForOutput
+j Loop
+
+Passthru:
+jal FlipFlopReg
+s db Setting r1
+PassLoop:
+yield
+l r1 db Setting
+bne r1 50 PassLoop
+s OreRequestChip Setting r1
+j Loop
+
+FlipFlopReg:
+s FlipFlop Mode 0 # 0 for straight, 1 for branch
+jal ra
+FlipFlopBranch:
+s FlipFlop Mode 1
+jal ra
