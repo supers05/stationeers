@@ -1,0 +1,109 @@
+#Hash IC for furnace and dispenser.
+alias dial d0
+alias button d1
+alias FurnaceControlIC d2
+alias DispenserControlIC d3
+
+alias furnaceValues r2
+alias dispenserValues r3
+
+Clear:
+s db Setting 0
+move furnaceValues 0
+
+ButtonWaitLoop:
+yield
+l r0 dial Setting
+jal ShowChoice
+bdseal d3 SetDispenser
+
+l r1 button Setting
+beqz r1 ButtonWaitLoop
+
+bdseal d2 SetFurnace
+j ButtonWaitLoop
+
+ShowChoice:
+mul r0 r0 4
+add r0 r0 1
+brnez r0 r0
+s db Setting 0 #Nothing
+move furnaceValues 0
+move dispenserValues 0
+j ra
+s db Setting -1301215609  #iron 8
+move furnaceValues 302172260
+move dispenserValues 005
+j ra
+s db Setting -404336834 #Copper 2
+move furnaceValues  302172260
+move dispenserValues 003
+j ra
+s db Setting 226410516  #Gold 4
+move furnaceValues 302172260
+move dispenserValues 004
+j ra
+s db Setting -929742000  #siver 12
+move furnaceValues 302172260
+move dispenserValues 009
+j ra
+s db Setting -290196476  #silicon 11
+move furnaceValues 302172260
+move dispenserValues 008
+j ra
+s db Setting 2134647745  #lead 9
+move furnaceValues 302172260
+move dispenserValues 006
+j ra
+s db Setting -1406385572  #nickel 10
+move furnaceValues 302172260
+move dispenserValues 007
+j ra
+s db Setting -654790771 #steel 14
+move furnaceValues  302172260
+move dispenserValues 001005005005
+j ra
+s db Setting -297990285 #Invar 7
+move furnaceValues  405020200
+move dispenserValues 005007
+j ra
+s db Setting 502280180 #Electrum 3
+move furnaceValues  201508869
+move dispenserValues 004009
+j ra
+s db Setting -82508479 #Solder 13
+move furnaceValues  117574500
+move dispenserValues 005006
+j ra
+s db Setting 1058547521 #Constantan 1
+move furnaceValues  338217060
+move dispenserValues 003007
+j ra
+s db Setting -787796599 #Inconel 6
+move furnaceValues  204458032
+move dispenserValues 004004007010
+j ra
+s db Setting 1579842814 #Hastelloy 5
+move furnaceValues  322049084
+move dispenserValues 002007009009
+j ra
+s db Setting -1897868623 #Setllite 15
+move furnaceValues  605341736
+move dispenserValues 008008009002
+j ra
+s db Setting 156348098 #Waspaloy 16
+move furnaceValues  140775534
+move dispenserValues 006006009007
+j ra
+s db Setting 412924554 #Astroloy 0
+move furnaceValues  339527760
+move dispenserValues 003010010002
+j ra
+
+SetFurnace:
+s FurnaceControlIC Setting furnaceValues
+j ra
+
+SetDispenser:
+s DispenserControlIC Setting dispenserValues
+j ra
