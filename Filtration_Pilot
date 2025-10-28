@@ -1,0 +1,127 @@
+# Filtration Pilot (onboard) by Sharidan
+define MAXPRESSURE 45000 # Max output pressure
+define ALARMPERCENT 5 # Min filter percent alarm
+define TRIGGERMOLES 1 # Min moles require to start
+define COOLTEMP 293 # Temp to enable pump/valve 20C
+# Device attachments
+alias Diode d0 # Optional: plug'n'play
+alias PumpValve d1 # Optional: plug'n'play
+# Internals
+alias FilterUnit db # Required: internal
+#define ALARMLIGHT HASH("StructureFlashingLight")
+alias process r7
+alias slotHash r9
+alias slotHash2 r10
+alias slotMoles r11
+alias slotMoles2 r12
+alias filterPercent r13
+alias filterPercent2 r14
+mainLoop:
+yield
+move r2 0 # Slot count
+move r0 0 # Filter Slot Index
+jal checkFilter
+move slotHash slotHash2
+move slotMoles slotMoles2
+move filterPercent filterPercent2
+move r0 1 # Filter Slot Index
+jal checkFilter
+beqal r2 1 oneFilter
+beqal r2 2 twoFilters
+sle r0 filterPercent ALARMPERCENT
+breqz r0 2 # Skip if not below alarm percentage
+#sb ALARMLIGHT On 1 # Force alarm light on
+breq r0 r8 3 # Skip if status is same
+brnez r0 2 # Skip if not zero
+#sb ALARMLIGHT On 0 # Alarm light off
+move r8 r0 # Store last alarm light state
+brlt slotMoles TRIGGERMOLES 2 # Process gases?
+move process 1 # Sufficient moles, process
+select process filterPercent process 0
+l r0 FilterUnit PressureOutput
+brlt r0 MAXPRESSURE 2
+move process 0 # Stop if output pressure high
+breqz process 6 # Skip if not processing
+breqz slotMoles 2
+move r15 -1 # Reset timer
+add r15 r15 1
+brlt r15 20 2 # IdleTimer < 20 ticks? (10 sec)
+move process 0 # Timer ran out: stop processing
+s FilterUnit Mode process
+brdns Diode 8 # Skip if not configured
+l r0 Diode PrefabHash
+brne r0 HASH("StructureDiodeSlide") 6 # Not, skip
+div r0 filterPercent 100
+brnez filterPercent 2
+move r0 0.0001 # Slide doesn't fill at zero (bug?)
+s Diode Setting r0
+s Diode On process
+bdns PumpValve mainLoop
+l r0 PumpValve PrefabHash
+seq r1 r0 HASH("StructureDigitalValve")
+seq r2 r0 HASH("StructureVolumePump")
+or r0 r1 r2 # Either one?
+beqz r0 mainLoop # Not the right device
+beqz COOLTEMP mainLoop # Not configured
+l r0 FilterUnit TemperatureOutput
+sgt r0 r0 COOLTEMP # Greater than cool temp?
+s PumpValve On r0
+j mainLoop
+checkFilter:
+move slotHash2 0
+move slotMoles2 0
+move filterPercent2 0
+ls r1 FilterUnit r0 Occupied
+beqz r1 ra
+ls slotHash2 FilterUnit r0 OccupantHash
+l r1 FilterUnit RatioCarbonDioxideInput
+beq slotHash2 1635000764 filterFound # CO2, small
+beq slotHash2 416897318 filterFound # CO2, medium
+beq slotHash2 1876847024 filterFound # CO2, heavy
+beq slotHash2 -185568964 filterFound # CO2, inf
+l r1 FilterUnit RatioNitrogenInput
+beq slotHash2 632853248 filterFound # N2, small
+beq slotHash2 -632657357 filterFound # N2, medium
+beq slotHash2 -1387439451 filterFound # N2, heavy
+beq slotHash2 152751131 filterFound # N2, inf
+l r1 FilterUnit RatioNitrousOxideInput
+beq slotHash2 -1247674305 filterFound
+beq slotHash2 1824284061 filterFound
+beq slotHash2 465267979 filterFound
+beq slotHash2 -123934842 filterFound
+l r1 FilterUnit RatioOxygenInput
+beq slotHash2 -721824748 filterFound
+beq slotHash2 -1067319543 filterFound
+beq slotHash2 -1217998945 filterFound
+beq slotHash2 -1055451111 filterFound
+l r1 FilterUnit RatioPollutantInput
+beq slotHash2 1915566057 filterFound
+beq slotHash2 63677771 filterFound
+beq slotHash2 1959564765 filterFound
+beq slotHash2 -503738105 filterFound
+l r1 FilterUnit RatioVolatilesInput
+beq slotHash2 15011598 filterFound
+beq slotHash2 1037507240 filterFound
+beq slotHash2 1255156286 filterFound
+beq slotHash2 -1916176068 filterFound
+move slotHash2 0
+j ra
+filterFound:
+l r3 FilterUnit TotalMolesInput
+mul slotMoles2 r3 r1
+ls filterPercent2 FilterUnit r0 Quantity
+add r2 r2 1
+j ra
+oneFilter:
+bnez slotHash ra
+move filterPercent filterPercent2
+move slotMoles slotMoles2
+j ra
+twoFilters:
+brne slotHash slotHash2 4
+add filterPercent filterPercent filterPercent2
+min filterPercent filterPercent 100
+j ra
+min filterPercent filterPercent filterPercent2
+max slotMoles slotMoles slotMoles2
+j ra
