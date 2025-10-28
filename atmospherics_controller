@@ -1,0 +1,77 @@
+# Nitrogen / CO2 Atmospherics Controller
+
+define MinPressure 90 # in kPa
+define MaxPressure 100 # in kPa
+define EmaxPress 120# in kPa
+define CO2setpoint 0.30 # in decimal
+alias MaxTemp r10
+define MinO2Setpoint 0.18 # in decimal
+define MaxO2Setpoint 0.22
+move MaxTemp 29 # in *C
+
+alias N2Pump d0
+alias CO2Pump d1
+alias FilterUnit db
+alias N2 r1
+alias CO2 r2
+alias O2 r5
+alias SensorPress r3
+alias Temp r4
+add MaxTemp MaxTemp 273
+
+Reset:
+jal N2PumpOff
+jal CO2PumpOff
+jal O2removeOff
+
+Loop:
+yield
+l CO2 FilterUnit RatioCarbonDioxideOutput2
+l O2 FilterUnit RatioOxygenOutput2
+l SensorPress FilterUnit PressureOutput2
+l Temp FilterUnit TemperatureOutput2
+
+bgtal SensorPress MaxPressure O2removeOn
+bleal SensorPress MinPressure O2removeOff
+bgeal Temp MaxTemp eStop
+bge   Temp MaxTemp Loop # E-stop now!
+bgeal SensorPress EmaxPress O2removeOn
+bgeal SensorPress EmaxPress eStop # E-stop now!
+bge   SensorPress EmaxPress Loop  # E-stop now!
+bgeal O2 MaxO2Setpoint O2removeOn
+bleal O2 MinO2Setpoint O2removeOff
+bgtal SensorPress MinPressure N2PumpOff
+bleal SensorPress MinPressure N2PumpOn
+bgeal CO2 CO2setpoint CO2PumpOff
+bltal CO2 CO2setpoint CO2PumpOn
+j Loop
+
+N2PumpOff:
+s N2Pump On 0
+j ra
+N2PumpOn:
+ble O2 MinO2Setpoint 2 # make sure we don't dilute o2 too much
+s N2Pump On 1
+j ra
+
+CO2PumpOff:
+s CO2Pump On 0
+j ra
+CO2PumpOn:
+# ble O2 MinO2Setpoint 2 # Ignore low oxygen when not enough co2
+s CO2Pump On 1
+j ra
+
+O2removeOff:
+s FilterUnit Mode 0
+j ra
+O2removeOn:
+ble O2 MinO2Setpoint 2  # make sure we don't dilute o2 too much
+s FilterUnit Mode 1
+j ra
+
+eStop:
+move r0 ra
+jal N2PumpOff
+jal CO2PumpOff
+j r0
