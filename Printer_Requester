@@ -1,0 +1,128 @@
+#Printer Logistics V4  CowsAreEvil #Updated 28/4/2023
+#Stacker can set the print quantity required.
+#Sorter and vending machine can restock ingots.
+#Button will reorder the ingot if they fail.
+#All printers can use the same button and vend.
+alias printer d0
+alias stacker d1  #(Optional)
+alias sorter d2   #(Optional)
+alias vendingHashMem d3  #(Optional)
+alias button d5   #(Optional)
+alias vendingAmountMem d4
+alias counter r10
+alias ingot r11
+alias oldimport r12
+
+define CLEARINGOT -1
+setup:
+move ingot CLEARINGOT
+bdns sorter start
+s sorter Mode 2
+s sorter On 1
+
+start:
+checkButton:
+bdns button checkSorter
+l r0 button Setting
+breqz r0 2
+move ingot CLEARINGOT
+s db Setting ingot
+
+checkSorter:
+bdns sorter checkCounter
+ls r0 sorter 0 Occupied
+beqz r0 checkIngotArrived
+ls r0 sorter 0 OccupantHash
+seq r0 r0 ingot
+s sorter Output r0 # 1=right, 0 left
+
+checkIngotArrived:
+l r0 printer ImportCount
+ble r0 oldimport checkCounter
+move ingot CLEARINGOT
+move oldimport r0
+
+checkCounter:
+bdns stacker checkRestock
+l counter stacker Setting
+l r0 printer Activate
+brnez r0 3
+s printer ClearMemory 1
+move oldimport 0
+breqz r0 4
+l r0 printer ExportCount
+brlt r0 counter 2
+s printer Activate 0
+checkRestock:
+yield
+s db Setting 0
+bdns vendingHashMem start
+bdns vendingAmountMem start
+l r0 vendingHashMem Setting
+bnez r0 start
+l r0 printer Open
+bnez r0 start
+bne ingot CLEARINGOT start
+lr r0 printer Contents -666742878 #Iron
+sub r0 50 r0
+select ingot r0 -1301215609 ingot
+bgtz r0 skip
+lr r0 printer Contents -1172078909 #Copper
+sub r0 50 r0
+select ingot r0 -404336834 ingot
+bgtz r0 skip
+lr r0 printer Contents -409226641 #Gold
+sub r0 50 r0
+select ingot r0 226410516 ingot
+bgtz r0 skip
+lr r0 printer Required -2002530571 #Lead
+select ingot r0 2134647745 ingot
+bgtz r0 skip
+lr r0 printer Required 556601662 #Nickel
+select ingot r0 -1406385572 ingot
+bgtz r0 skip
+lr r0 printer Contents -1195893171 #Silicon
+sub r0 50 r0
+select ingot r0 -290196476 ingot
+bgtz r0 skip
+lr r0 printer Required 687283565 #Silver
+select ingot r0 -929742000 ingot
+bgtz r0 skip
+lr r0 printer Required 1731241392 #Constantan
+select ingot r0 1058547521 ingot
+bgtz r0 skip
+lr r0 printer Required 478264742 #Electrum
+select ingot r0 502280180 ingot
+bgtz r0 skip
+lr r0 printer Required -626453759 #Invar
+select ingot r0 -297990285 ingot
+bgtz r0 skip
+lr r0 printer Required -1206542381 #Solder
+select ingot r0 -82508479 ingot
+bgtz r0 skip
+lr r0 printer Contents 1331613335 #Steel
+sub r0 50 r0
+select ingot r0 -654790771 ingot
+bgtz r0 skip
+lr r0 printer Required -1493155787 #Astroloy
+select ingot r0 412924554 ingot
+bgtz r0 skip
+lr r0 printer Required 2019732679 #Hastelloy
+select ingot r0 1579842814 ingot
+bgtz r0 skip
+lr r0 printer Required -586072179 #Inconel
+select ingot r0 -787796599 ingot
+bgtz r0 skip
+lr r0 printer Required -500544800 #Stellite
+select ingot r0 -1897868623 ingot
+bgtz r0 skip
+lr r0 printer Required 1787814293 #Waspaloy
+select ingot r0 156348098 ingot
+skip:
+brgtz r0 2
+move ingot CLEARINGOT
+beq ingot CLEARINGOT start
+s db Setting -99
+s vendingHashMem Setting ingot
+s vendingAmountMem Setting r0
+j start
