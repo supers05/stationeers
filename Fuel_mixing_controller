@@ -1,0 +1,88 @@
+#Temperature controller
+
+alias mixer d0
+alias volatiles d1 #analyzer
+alias oxygen d2 #analyzer
+alias mixedfuel d3 #analyzer
+alias CoolingPump d5
+
+# H/O = 66.6%, HNO = 50%
+define RatioMax 66 # High Ratio value
+define RatioMin 67 # Low Ratio value
+define TempMax 295 # Max input temp
+define TargetTemp 20 # Target temp
+define PressMax 10000 # Max Fuel pressure
+
+reset:
+jal MixerOff
+brdns volatiles 2  #Turn on analyzers
+s volatiles On 1 #Optional
+brdns oxygen 2
+s oxygen On 1 #Optional
+s mixedfuel On 1
+jal CoolingPumpOff
+move r0 0 #ratio var
+move r1 RatioMin #ratio mix var
+move r2 0 #branch
+move r3 0 #Press/Temp var
+
+loop:
+yield
+jal MixerOff
+jal LoadVolatiles
+bgt r3 TempMax loop #Don't operate over max temp
+jal LoadOxygen
+bgt r3 TempMax loop
+brgt r3 TargetTemp 2
+jal CoolingPumpOff
+brlt r3 TargetTemp 2
+jal CoolingPumpOn
+l r3 mixedfuel Pressure #Load Mixed Pressure Not Optional
+bgt r3 PressMax loop #Don't operate over max press
+
+ratios:
+jal MixerOn
+l r0 mixedfuel RatioVolatiles #Load Mixed Ratio Not Optional
+blt r0 RatioMin moregas
+bgt r0 RatioMax lessgas
+j continue
+moregas:
+add r1 r1 1
+min r1 r1 90
+j continue
+lessgas:
+sub r1 r1 1
+max r1 r1 10
+continue:
+s mixer Setting r1 #Set Mixed Ratio Not Optional
+j loop
+
+MixerOn:
+s mixer On 1
+j ra
+
+MixerOff:
+s mixer On 0
+j ra
+
+CoolingPumpOn:
+brdns CoolingPump 2
+s CoolingPump On 1
+j ra
+
+CoolingPumpOff:
+brdns CoolingPump 2
+s CoolingPump On 0
+j ra
+
+LoadVolatiles:
+move r3 0
+brdns volatiles 2
+l r3 volatiles Temperature
+j ra
+
+LoadOxygen:
+move r3 0
+brdns oxygen 2
+l r3 oxygen Temperature
+j ra
