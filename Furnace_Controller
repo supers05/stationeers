@@ -1,0 +1,111 @@
+alias Furnace d0
+alias Pumpcool d1
+alias Pumpfuel d2
+alias HashIC d3
+alias Dial d4
+
+define PureMetalSettings 302172260
+
+alias temp r0
+alias press r1
+alias maxtemp r7
+alias mintemp r8
+alias maxpress r9
+alias minpress r10
+alias targetRecipe r12
+alias cachedSettings r15
+
+reset:
+s db Setting -1
+start:
+s Pumpcool Setting 20
+s Pumpfuel On 0
+s Pumpcool On 0
+s Furnace SettingInput 0
+s Furnace Open 0
+
+WaitGo:
+yield
+l cachedSettings db Setting
+l r2 db Setting
+bltz r2 WaitGo
+s Furnace On 1
+beqz r2 dump
+
+Setup:
+mod maxpress r2 256
+div r2 r2 256
+trunc r2 r2
+mod maxtemp r2 256
+div r2 r2 256
+trunc r2 r2
+mod minpress r2 256
+div r2 r2 256
+trunc r2 r2
+mul maxpress maxpress 500
+mul mintemp r2 50
+mul minpress minpress 500
+mul maxtemp maxtemp 50
+brne maxpress 2500 2  #tweak here for electrum
+sub maxpress maxpress 100 #2400/500 doesn't divide
+s Furnace SettingInput 100
+l targetRecipe HashIC Setting
+
+Loop:
+yield
+l temp Furnace Temperature
+l press Furnace Pressure
+
+slt r4 temp 373   #cold
+slt r5 press 500 #empty
+and r5 r4 r5 #cold and empty
+select r5 r5 100 10 #flood if cold and empty
+s Pumpfuel Setting r5
+
+sgt r3 press 500 #full
+and r3 r3 r4 #cold and full
+l r4 Furnace RatioVolatiles
+sge r4 r4 0.05
+and r3 r3 r4 #cold and full and enough h2
+l r4 Furnace RatioOxygen
+sge r4 r4 0.05
+and r3 r3 r4 #cold, full and enough h2 and o2
+s Furnace Activate r3 #Spark
+
+slt r3 temp mintemp
+slt r5 press minpress
+or r3 r3 r5 #too cold, or pressure too low
+s Pumpfuel On r3
+
+sgt r4 temp maxtemp #too hot
+s Pumpcool On r4
+
+sgt r6 press maxpress #pressure too high
+mul r6 r6 30
+s Furnace SettingOutput r6
+
+l r11 Furnace RecipeHash
+breq cachedSettings PureMetalSettings 2
+beq targetRecipe r11 eject #making target ?
+l r0 db Setting #check if changed in the middle
+bne r0 cachedSettings start
+l r13 Furnace Open #Abort if opened by player
+beqz r13 Loop
+
+eject:
+s Furnace Open 1
+yield
+l r14 Furnace Reagents
+bgtz r14 eject
+j start
+
+dump:
+s Furnace Open 1
+s Furnace SettingOutput 100
+s Furnace SettingInput 0
+WaitForEmpty:
+l press Furnace Pressure
+l r0 db Setting #check if changed in the middle
+bne r0 cachedSettings start
+bgt press 0.1 WaitForEmpty
+j reset
