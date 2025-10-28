@@ -1,0 +1,75 @@
+#Printer Logistics V4  CowsAreEvil
+#Updated 28/4/2023 - modified by supers05
+#Stacker can set the print quantity required.
+#Sorter and vending machine can restock ingots.
+#Button will reorder the ingot if they fail.
+#All printers can use the same button and vend.
+#alias dispenserHash d0 #alias printer d0
+alias stacker d1  #
+alias sorter d2   #
+alias vendingHashMem d3  #
+alias restock_button d5   #
+alias vendingAmountMem d4
+alias counter r10
+alias ingot r11
+alias oldimport r12
+alias ingotamount r13
+
+define CLEARINGOT -1
+setup:
+move ingotamount 50
+move ingot CLEARINGOT
+bdns sorter start
+s sorter Mode 2
+s sorter On 1
+s stacker Mode 0
+s stacker Setting ingotamount
+s stacker ClearMemory 1
+
+start:
+yield
+checkRestockButton:
+bdns restock_button checkSorter
+bne ingot CLEARINGOT checkSorter
+l r0 restock_button Setting
+breqz r0 3
+move ingot -654790771 #Steel
+move ingotamount 50
+brgtz r0 3
+move ingot CLEARINGOT
+move ingotamount 0
+s db Setting ingot
+
+checkSorter:
+bdns sorter start
+ls r0 sorter 0 Occupied
+beqz r0 checkIngotArrived
+ls r0 sorter 0 OccupantHash
+seq r1 r0 ingot
+s sorter Output r1 # 1=right, 0 left
+
+checkIngotArrived:
+l r0 stacker ImportCount
+ble r0 oldimport checkCounter
+move ingot CLEARINGOT
+move oldimport r0
+
+checkCounter:
+#Printer Controller
+
+checkRestock:
+bdns vendingHashMem start
+bdns vendingAmountMem start
+
+#  1331613335 #Steel
+
+skip:
+brnez ingot 2
+move ingot CLEARINGOT
+beq ingot CLEARINGOT start
+l r9 vendingAmountMem Setting
+bnez r9 start
+beq ingot CLEARINGOT start
+s vendingHashMem Setting ingot
+s vendingAmountMem Setting ingotamount
+j start
