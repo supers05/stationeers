@@ -1,0 +1,109 @@
+#dispenser control chip (Eurphoria)
+#dispenser reads go button. (needs silo ICs following hash chip)
+#also read amount dial
+
+#Dispenser chip decodes recipe fragment into memory chip
+#Silo chips watch for their hash type dispense one, reset memory chip
+
+alias MemoryChip d0
+alias GoButton d1
+alias Display d2
+alias AmountDial d3
+
+alias amount r11
+alias oreHash r12
+alias oreCode r13
+alias recipe r14
+alias cachedRecipe r15
+
+reset:
+s MemoryChip Setting -1
+s db Setting 0
+s Display On 0
+
+WaitGo:
+yield
+l cachedRecipe db Setting
+l amount AmountDial Setting
+l r0 GoButton Setting
+sgtz r9 r0
+sgtz r8 cachedRecipe
+and r1 r9 r8
+sgtz r9 amount
+and r1 r1 r9
+beqz r1 WaitGo
+
+s Display On 1
+s Display Color 2
+AmountLoop:
+move recipe cachedRecipe
+s Display Setting amount
+
+DispenseLoop:
+mod oreCode recipe 1000
+jal GetOreType
+bnezal oreHash DispenseOne
+yield
+div recipe recipe 1000
+trunc recipe recipe
+
+bnez recipe DispenseLoop
+sub amount amount 1
+bnez amount AmountLoop
+s Display Setting amount
+s Display Color 0
+sleep 1
+j reset
+
+GetOreType:
+mul r0 oreCode 2
+add r0 r0 1
+brnez r0 r0
+move oreHash 0 # nothing 0
+j ra
+move oreHash 1724793494 # coal 1
+j ra
+move oreHash -983091249 # cobalt 2
+j ra
+move oreHash -707307845 #Copper ore 3
+j ra
+move oreHash -1348105509  #gold ore 4
+j ra
+move oreHash 1758427767  #iron ore 5
+j ra
+move oreHash -190236170  #lead ore 6
+j ra
+move oreHash 1830218956  #nickel ore 7
+j ra
+move oreHash 1103972403  #silicon ore 8
+j ra
+move oreHash -916518678  #siver ore 9
+j ra
+move oreHash -654790771 #steel 10 ?
+j ra
+move oreHash -1516581844 #uranium 11 ?
+j ra
+
+DispenseOne:
+s MemoryChip Setting oreHash
+dispenseWait:
+yield
+l r0 MemoryChip Setting
+beq r0 oreHash dispenseWait
+
+beq r0 50 ra #50 means we have a rock
+error:
+s Display Color 4
+s Display Setting r0
+
+errorLoop:
+s MemoryChip Setting oreHash
+s Display On 1
+yield
+l r0 GoButton Setting
+bnez r0 reset
+s Display On 0
+yield
+l r0 GoButton Setting
+bnez r0 reset
+j errorLoop
