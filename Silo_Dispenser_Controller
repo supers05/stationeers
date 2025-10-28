@@ -1,0 +1,56 @@
+#Silo chip.
+#reads from dispenser control,
+#compares to attached hash chip
+#could also drive a display...
+
+alias DispenserMemory d0
+alias Silo d1
+alias SiloHash d2
+alias Quantity1 d3
+
+reset:
+s Silo Open 0
+s Silo ClearMemory 1
+s Silo On 1
+bdns Quantity1 2
+s Quantity1 On 1
+jal LEDRed
+bdns Quantity1 2
+s Quantity1 Setting 0
+
+CheckLoop:
+yield
+l r5 Silo Quantity
+bdns Quantity1 2
+s Quantity1 Setting r5
+beqzal r5 LEDRed
+bnezal r5 LEDGreen
+l r0 DispenserMemory Setting
+l r1 SiloHash Setting
+beqz r1 CheckLoop
+bne r0 r1 CheckLoop
+
+l r0 Silo Quantity
+bgtz r0 DispenseOne
+s DispenserMemory Setting 0
+j reset
+
+DispenseOne:
+s Silo ClearMemory 1
+s Silo Open 1
+WaitOutput:
+yield
+l r0 Silo ExportCount
+beqz r0 WaitOutput
+s Silo Open 0
+s DispenserMemory Setting 50
+j reset
+
+LEDRed:
+bdns Quantity1 2
+s Quantity1 Color 4
+j ra
+LEDGreen:
+bdns Quantity1 2
+s Quantity1 Color 2
+j ra
